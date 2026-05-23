@@ -15,7 +15,7 @@ const HeroSection = ({ onEmergencySupport }: HeroSectionProps) => {
           <div className="space-y-8">
             <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
               <Icon name="ShieldCheckIcon" size={20} className="text-brand-trust" variant="solid" />
-              <span className="text-sm font-semibold text-white">Trusted by 500+ Businesses</span>
+              <span className="text-sm font-semibold text-white">Trusted by 30+ Businesses</span>
             </div>
             
             <h1 className="text-4xl lg:text-5xl xl:text-6xl font-heading font-bold text-white leading-tight">
@@ -27,13 +27,13 @@ const HeroSection = ({ onEmergencySupport }: HeroSectionProps) => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link
+              {/* <Link
                 href="/client-portal"
                 className="inline-flex items-center justify-center px-8 py-4 text-base font-heading font-semibold text-primary bg-white hover:bg-gray-50 rounded-lg shadow-elevated hover:shadow-brand transition-all duration-300"
               >
                 Get Free Assessment
                 <Icon name="ArrowRightIcon" size={20} className="ml-2" />
-              </Link>
+              </Link> */}
               
               <button
                 onClick={onEmergencySupport}

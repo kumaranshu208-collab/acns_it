@@ -45,7 +45,7 @@ const Header = ({ className = '' }: HeaderProps) => {
                 <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <span className="text-xl font-heading font-bold text-text-primary">Ansu Tech Solutions</span>
+            <span className="text-xl font-heading font-bold text-text-primary">ACNS</span>
           </Link>
 
           <nav className="hidden lg:flex items-center space-x-1">

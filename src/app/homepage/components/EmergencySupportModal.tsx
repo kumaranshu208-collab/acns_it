@@ -1,9 +1,15 @@
 import { useState } from 'react';
+import emailjs from '@emailjs/browser';
 import Icon from '@/components/ui/AppIcon';
 
 interface EmergencySupportModalProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+// Initialize EmailJS (once on app load)
+if (typeof window !== 'undefined') {
+  emailjs.init(process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY!);
 }
 
 const EmergencySupportModal = ({ isOpen, onClose }: EmergencySupportModalProps) => {
@@ -17,24 +23,117 @@ const EmergencySupportModal = ({ isOpen, onClose }: EmergencySupportModalProps) 
   });
   
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [orderId, setOrderId] = useState('');
   
   if (!isOpen) return null;
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitted(true);
-    setTimeout(() => {
-      setIsSubmitted(false);
-      onClose();
-      setFormData({
-        name: '',
-        company: '',
-        phone: '',
-        email: '',
-        issue: '',
-        severity: 'high'
-      });
-    }, 3000);
+    setIsLoading(true);
+    setError('');
+    const generatedOrderId = `ORD-${Date.now()}`;
+    setOrderId(generatedOrderId);
+    
+    try {
+      // Send email via EmailJS
+      await emailjs.send(
+        process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!,
+        process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID!,
+        {
+          to_email: process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@example.com',
+          admin_email: process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@example.com',
+          email: process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@example.com',
+          user_name: formData.name,
+          user_email: formData.email,
+          user_phone: formData.phone,
+          company_name: formData.company,
+          order_id: generatedOrderId,
+          severity: formData.severity,
+          issue_description: formData.issue,
+          reply_to: formData.email,
+        }
+      );
+      
+      // Send Slack notification (optional - for instant team alert)
+      // if (process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL) {
+      //   const slackMessage = {
+      //     blocks: [
+      //       {
+      //         type: 'header',
+      //         text: {
+      //           type: 'plain_text',
+      //           text: `🚨 Emergency Support Request - ${formData.severity.toUpperCase()}`,
+      //         },
+      //       },
+      //       {
+      //         type: 'section',
+      //         fields: [
+      //           {
+      //             type: 'mrkdwn',
+      //             text: `*Name:*\n${formData.name}`,
+      //           },
+      //           {
+      //             type: 'mrkdwn',
+      //             text: `*Phone:*\n${formData.phone}`,
+      //           },
+      //           {
+      //             type: 'mrkdwn',
+      //             text: `*Email:*\n${formData.email}`,
+      //           },
+      //           {
+      //             type: 'mrkdwn',
+      //             text: `*Company:*\n${formData.company || 'N/A'}`,
+      //           },
+      //         ],
+      //       },
+      //       {
+      //         type: 'section',
+      //         text: {
+      //           type: 'mrkdwn',
+      //           text: `*Issue:*\n${formData.issue}`,
+      //         },
+      //       },
+      //       {
+      //         type: 'context',
+      //         elements: [
+      //           {
+      //             type: 'mrkdwn',
+      //             text: `_Submitted at ${new Date().toLocaleString()}_`,
+      //           },
+      //         ],
+      //       },
+      //     ],
+      //   };
+        
+      //   await fetch(process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL, {
+      //     method: 'POST',
+      //     headers: { 'Content-Type': 'application/json' },
+      //     body: JSON.stringify(slackMessage),
+      //   });
+      // }
+      
+      setIsSubmitted(true);
+      setTimeout(() => {
+        setIsSubmitted(false);
+        onClose();
+        setFormData({
+          name: '',
+          company: '',
+          phone: '',
+          email: '',
+          issue: '',
+          severity: 'high'
+        });
+        setOrderId('');
+      }, 3000);
+    } catch (err) {
+      setError('Failed to submit request. Please try again.');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -54,7 +153,7 @@ const EmergencySupportModal = ({ isOpen, onClose }: EmergencySupportModalProps) 
             </div>
             <div>
               <h2 className="text-xl font-heading font-bold text-text-primary">Emergency Support Request</h2>
-              <p className="text-sm text-text-secondary">We'll respond within 15 minutes</p>
+              <p className="text-sm text-text-secondary">We'll respond within 20 minutes</p>
             </div>
           </div>
           
@@ -88,7 +187,7 @@ const EmergencySupportModal = ({ isOpen, onClose }: EmergencySupportModalProps) 
               
               <div>
                 <label htmlFor="company" className="block text-sm font-semibold text-text-primary mb-2">
-                  Company Name *
+                  Company Name 
                 </label>
                 <input
                   type="text"
@@ -96,7 +195,6 @@ const EmergencySupportModal = ({ isOpen, onClose }: EmergencySupportModalProps) 
                   name="company"
                   value={formData.company}
                   onChange={handleChange}
-                  required
                   className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300"
                   placeholder="Enter company name"
                 />
@@ -176,23 +274,29 @@ const EmergencySupportModal = ({ isOpen, onClose }: EmergencySupportModalProps) 
                 <Icon name="ExclamationTriangleIcon" size={20} className="text-warning flex-shrink-0 mt-0.5" variant="solid" />
                 <div className="text-sm text-text-secondary">
                   <p className="font-semibold text-text-primary mb-1">Emergency Response Protocol</p>
-                  <p>Our technical team will contact you within 15 minutes. For immediate assistance, call our 24/7 hotline: <span className="font-semibold text-accent">1800-123-4567</span></p>
+                  <p>Our technical team will contact you within 20 minutes. For immediate assistance, call our 24/7 hotline: <a href="tel:+911204351606" aria-label="Call hotline" className="font-semibold text-accent hover:underline">01204351606</a></p>
                 </div>
               </div>
-            </div>
-            
+            </div>            
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                <p className="text-sm text-red-600 font-semibold">{error}</p>
+              </div>
+            )}            
             <div className="flex space-x-4">
               <button
                 type="submit"
-                className="flex-1 px-6 py-3 text-base font-heading font-semibold text-white bg-accent hover:bg-accent/90 rounded-lg shadow-subtle hover:shadow-brand transition-all duration-300"
+                disabled={isLoading}
+                className="flex-1 px-6 py-3 text-base font-heading font-semibold text-white bg-accent hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-subtle hover:shadow-brand transition-all duration-300"
               >
-                Submit Emergency Request
+                {isLoading ? 'Sending...' : 'Submit Emergency Request'}
               </button>
               
               <button
                 type="button"
                 onClick={onClose}
-                className="px-6 py-3 text-base font-heading font-semibold text-text-secondary bg-muted hover:bg-muted/80 rounded-lg transition-all duration-300"
+                disabled={isLoading}
+                className="px-6 py-3 text-base font-heading font-semibold text-text-secondary bg-muted hover:bg-muted/80 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all duration-300"
               >
                 Cancel
               </button>
@@ -209,12 +313,12 @@ const EmergencySupportModal = ({ isOpen, onClose }: EmergencySupportModalProps) 
             </h3>
             
             <p className="text-lg text-text-secondary mb-6">
-              Our emergency response team has been notified and will contact you within 15 minutes.
+              Our emergency response team has been notified and will contact you within 20 minutes.
             </p>
             
             <div className="bg-muted rounded-lg p-4 inline-block">
               <p className="text-sm text-text-secondary">
-                Reference ID: <span className="font-mono font-semibold text-primary">EMG-{Date.now().toString().slice(-8)}</span>
+                Reference ID: <span className="font-mono font-semibold text-primary">{orderId || `EMG-${Date.now().toString().slice(-8)}`}</span>
               </p>
             </div>
           </div>
